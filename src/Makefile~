@@ -1,0 +1,13 @@
+all: sheet03_faceDetector sheet03_adaBoost sheet03_tracking face_detection
+
+sheet03_faceDetector:
+	g++ sheet03_faceDetector.cc -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_objdetect -o sheet03_faceDetector
+
+sheet03_adaBoost:
+	g++ sheet03_adaBoost.cc AdaBoost.cc WeakClassifier.cc -o sheet03_adaBoost
+
+sheet03_tracking:
+	g++ sheet03_tracking.cc AdaBoost.cc WeakClassifier.cc -lopencv_core -lopencv_highgui -lopencv_imgproc -o sheet03_tracking
+
+face_detection:
+	g++ facedetect.cpp -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_shape -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_flann -lopencv_viz -o face_detection

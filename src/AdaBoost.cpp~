@@ -1,0 +1,96 @@
+/*
+ * AdaBoost.cc
+ *
+ *  Created on: Apr 25, 2014
+ *      Author: richard
+ */
+
+#include "AdaBoost.h"
+#include <iostream>
+#include <cmath>
+#include <numeric>
+#include <fstream>
+AdaBoost::AdaBoost(u32 nIterations) :
+	nIterations_(nIterations)
+{}
+
+void AdaBoost::normalizeWeights() {
+	double sum_of_elems =0;
+	 for(int i=0;i<weights_.size();++i)
+	 	sum_of_elems += weights_[i];
+	for(int i=0;i<weights_.size();++i)
+		weights_[i] /= sum_of_elems;
+}
+
+void AdaBoost::updateWeights(const std::vector<Example>& data, const std::vector<u32>& classAssignments, u32 iteration) {		
+	for(int i=0;i<weights_.size();++i)
+		weights_[i] = weights_[i]*( data[i].label == classAssignments[i]  ? classifierWeights_[iteration] : 1);
+}
+
+f32 AdaBoost::weightedErrorRate(const std::vector<Example>& data, const std::vector<u32>& classAssignments) {
+	f32 errorRate = 0;
+	for(int i=0;i<data.size();++i)
+		errorRate += (data[i].label != classAssignments[i] ? weights_[i] : 0);
+	return errorRate;
+}
+
+void AdaBoost::initialize(std::vector<Example>& data) {
+	// initialize weak classifiers
+	u32 dimension = data.at(0).attributes.size();
+	
+	for(int i=0;i<nIterations_;++i){
+		weakClassifier_.push_back(Stump());
+		weakClassifier_[i].initialize(dimension);
+	}
+		
+	// initialize classifier weights
+	f32 classifierW = 1.0/weakClassifier_.size();
+	for(int i=0;i<weakClassifier_.size();++i)
+	   	classifierWeights_.push_back(classifierW);
+
+	// initialize weights
+	f32 weight = 1.0/data.size();
+	for(int i=0;i<data.size();++i)
+		weights_.push_back(weight);
+}
+
+void AdaBoost::trainCascade(std::vector<Example>& data) {
+
+	u32 dimension = data.at(0).attributes.size();
+	
+	for (u32 iteration = 0; iteration < nIterations_; iteration++) {
+
+		// train weak classifier
+		weakClassifier_[iteration].train(data,weights_);
+
+		//std::cout<<"Split Attribute :"<<weakClassifier_[iteration].getSplitAttribute()<<" "<<"Split Value: "<<weakClassifier_[iteration].getSplitValue()<<std::endl;
+		// classify training examples
+		std::vector<u32> classAssignments;
+		weakClassifier_[iteration].classify(data,classAssignments);
+
+		// determine weight for weak classifier
+		f32 errorRate = weightedErrorRate(data,classAssignments);
+		classifierWeights_[iteration] = (f32)errorRate / (1-(f32)errorRate);
+		
+		// update weights
+		updateWeights(data,classAssignments,iteration);
+		normalizeWeights();
+	}
+}
+
+u32 AdaBoost::classify(const Vector& v) {
+	if (confidence(v, 0) > confidence(v, 1))
+		return 0;
+	else
+		return 1;
+}
+
+f32 AdaBoost::confidence(const Vector& v, u32 k) {
+	f32 score = 0,errorRate;
+	u32 label;
+	for(int i=0;i<weakClassifier_.size();++i){
+		label = weakClassifier_[i].classify(v);
+		score += (label == k ? log(1.0/classifierWeights_[i]) : 0);
+	}
+	return score;
+}
